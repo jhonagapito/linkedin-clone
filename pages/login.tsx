@@ -40,16 +40,18 @@ function login({ providers }: Props) {
             <HeaderLink Icon={OndemandVideoSharpIcon} text="Learning" />
             <HeaderLink Icon={BusinessCenterIcon} text="Jobs" />
           </div>
+          <>
           {Object.values(providers).map((provider: any) => (
             <div key={provider.name} className="pl-4">
               <button
                 onClick={() => signIn(provider.id, { callbackUrl: '/' })}
                 className="rounded-full border border-blue-700 px-5 py-1.5 font-semibold text-blue-700 transition-all hover:border-2"
-              >
+                >
                 Sign In
               </button>
             </div>
           ))}
+          </>
         </div>
       </header>
 
@@ -86,8 +88,6 @@ export default login
 export async function getServerSideProps(context: any) {
   const providers = await getProviders()
   const session = await getSession(context)
-  console.log('SESSION>>>', session)
-
   if(session) {
     return {
       redirect: {

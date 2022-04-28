@@ -26,21 +26,21 @@ const Feed = ({ posts }: Props) => {
       setUseSSRPosts(false)
     }
 
-    if(handlePost) {
-        fetchPosts()
+    if (handlePost) {
+      fetchPosts()
     }
   }, [handlePost])
 
   return (
     <div className="max-w-lg space-y-6 pb-24">
       <Input />
-      {!useSSRPosts
-        ? realtimePosts.map((post: UserPost) => (
-            <Post key={post._id} post={post} />
-          ))
-        : posts.map((post) => (
-            <Post key={post._id} post={post} />
-          ))}
+      <>
+        {!useSSRPosts
+          ? realtimePosts.map((post: UserPost) => (
+              <Post key={post._id} post={post} />
+            ))
+          : posts.map((post) => <Post key={post._id} post={post} />)}
+      </>
     </div>
   )
 }

@@ -18,17 +18,17 @@ interface Props {
   articles: Array<any>
 }
 
-const Home = ({posts, articles} : Props) => {
-  const [modalOpen, setModalOpen] = useRecoilState(modalState);
-  const [modalType, setModalType] = useRecoilState(modalTypeState);
+const Home = ({ posts, articles }: Props) => {
+  const [modalOpen, setModalOpen] = useRecoilState(modalState)
+  const [modalType, setModalType] = useRecoilState(modalTypeState)
   const router = useRouter()
   const { status } = useSession({
     required: true,
     onUnauthenticated() {
       router.push('/login')
-    }
+    },
   })
-  
+
   return (
     <div className="h-screen overflow-y-scroll bg-[#F3F2EF] dark:bg-black md:space-y-6">
       <Head>
@@ -43,11 +43,9 @@ const Home = ({posts, articles} : Props) => {
         </div>
         <Widgets articles={articles} />
         <AnimatePresence>
-          {
-            modalOpen && (
-              <Modal handleClose={() => setModalOpen(false)} type={modalType} />
-            )
-          }
+          {modalOpen && (
+            <Modal handleClose={() => setModalOpen(false)} type={modalType} />
+          )}
         </AnimatePresence>
       </main>
     </div>
@@ -56,45 +54,47 @@ const Home = ({posts, articles} : Props) => {
 
 export default Home
 
-
-export async function getServerSideProps (context: any) {
+export async function getServerSideProps(context: any) {
   // Check if the user is authenticated on the server
   const session = await getSession(context)
-  if(!session) {
+  if (!session) {
     return {
       redirect: {
         permanent: false,
-        destination: "/login"
-      }
+        destination: '/login',
+      },
     }
   }
 
-   // Get posts on SSR
-   const { db } = await connectToDatabase();
-   const posts = await db
-     .collection("posts")
-     .find()
-     .sort({ "timestamp": -1 })
-     .toArray();
- 
-   // Get Google News API
-   const results = await fetch(
-     `https://newsapi.org/v2/top-headlines?country=ph&apiKey=${process.env.NEWS_API_KEY}`
-   ).then((res) => res.json());
+  // Get posts on SSR
+  const { db } = await connectToDatabase()
+  const posts = await db
+    .collection('posts')
+    .find()
+    .sort({ timestamp: -1 })
+    .toArray()
+
+  // Get Google News API
+  const results = await fetch(
+    `https://newsapi.org/v2/top-headlines?country=ph&apiKey=${process.env.NEWS_API_KEY}`
+  ).then((res) => res.json())
 
   return {
     props: {
       session,
       articles: results.articles,
-      posts: posts.map((post: any) => ({
-        _id: post._id.toString(),
-        input: post.input,
-        photoUrl: post.photoUrl,
-        username: post.username,
-        email: post.email,
-        userImg: post.userImg,
-        createdAt: post.createdAt,
-      } as UserPost))
-    }
+      posts: posts.map(
+        (post: any) =>
+          ({
+            _id: post._id.toString(),
+            input: post.input,
+            photoUrl: post.photoUrl,
+            username: post.username,
+            email: post.email,
+            userImg: post.userImg,
+            createdAt: post.createdAt,
+          } as UserPost)
+      ),
+    },
   }
 }
