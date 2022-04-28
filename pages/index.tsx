@@ -1,86 +1,100 @@
-import type { NextPage } from 'next'
 import Head from 'next/head'
-import Image from 'next/image'
+import { getSession, signOut, useSession } from 'next-auth/react'
+import { AnimatePresence } from 'framer-motion'
+import { useRecoilState } from 'recoil'
+import { modalState, modalTypeState } from '../atoms/modalAtom'
+import { connectToDatabase } from '../util/mongodb'
+import { useRouter } from 'next/router'
 
-const Home: NextPage = () => {
+import Header from '../components/Header'
+import Sidebar from '../components/Sidebar'
+import Widgets from '../components/Widgets'
+import { UserPost } from '../models/UserPost'
+import Feed from '../components/Feed'
+import Modal from '../components/Modal'
+
+interface Props {
+  posts: Array<UserPost>
+  articles: Array<any>
+}
+
+const Home = ({posts, articles} : Props) => {
+  const [modalOpen, setModalOpen] = useRecoilState(modalState);
+  const [modalType, setModalType] = useRecoilState(modalTypeState);
+  const router = useRouter()
+  const { status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push('/login')
+    }
+  })
+  
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center py-2">
+    <div className="h-screen overflow-y-scroll bg-[#F3F2EF] dark:bg-black md:space-y-6">
       <Head>
-        <title>Create Next App</title>
+        <title>Feed | LinkedIn</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
-        <h1 className="text-6xl font-bold">
-          Welcome to{' '}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Next.js!
-          </a>
-        </h1>
-
-        <p className="mt-3 text-2xl">
-          Get started by editing{' '}
-          <code className="rounded-md bg-gray-100 p-3 font-mono text-lg">
-            pages/index.tsx
-          </code>
-        </p>
-
-        <div className="mt-6 flex max-w-4xl flex-wrap items-center justify-around sm:w-full">
-          <a
-            href="https://nextjs.org/docs"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Documentation &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Find in-depth information about Next.js features and API.
-            </p>
-          </a>
-
-          <a
-            href="https://nextjs.org/learn"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Learn &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Learn about Next.js in an interactive course with quizzes!
-            </p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Examples &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Discover and deploy boilerplate example Next.js projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Deploy &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+      <Header />
+      <main className="flex justify-center gap-x-5 px-4 sm:px-12">
+        <div className="flex flex-col gap-5 md:flex-row">
+          <Sidebar />
+          <Feed posts={posts} />
         </div>
+        <Widgets articles={articles} />
+        <AnimatePresence>
+          {
+            modalOpen && (
+              <Modal handleClose={() => setModalOpen(false)} type={modalType} />
+            )
+          }
+        </AnimatePresence>
       </main>
-
-      <footer className="flex h-24 w-full items-center justify-center border-t">
-        <a
-          className="flex items-center justify-center gap-2"
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-        </a>
-      </footer>
     </div>
   )
 }
 
 export default Home
+
+
+export async function getServerSideProps (context: any) {
+  // Check if the user is authenticated on the server
+  const session = await getSession(context)
+  if(!session) {
+    return {
+      redirect: {
+        permanent: false,
+        destination: "/login"
+      }
+    }
+  }
+
+   // Get posts on SSR
+   const { db } = await connectToDatabase();
+   const posts = await db
+     .collection("posts")
+     .find()
+     .sort({ "timestamp": -1 })
+     .toArray();
+ 
+   // Get Google News API
+   const results = await fetch(
+     `https://newsapi.org/v2/top-headlines?country=ph&apiKey=${process.env.NEWS_API_KEY}`
+   ).then((res) => res.json());
+
+  return {
+    props: {
+      session,
+      articles: results.articles,
+      posts: posts.map((post: any) => ({
+        _id: post._id.toString(),
+        input: post.input,
+        photoUrl: post.photoUrl,
+        username: post.username,
+        email: post.email,
+        userImg: post.userImg,
+        createdAt: post.createdAt,
+      } as UserPost))
+    }
+  }
+}
