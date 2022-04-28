@@ -9,7 +9,9 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
     <SessionProvider session={session}>
       <RecoilRoot>
         <ThemeProvider attribute="class">
+          <>
           <Component {...pageProps} />
+          </>
         </ThemeProvider>
       </RecoilRoot>
     </SessionProvider>
